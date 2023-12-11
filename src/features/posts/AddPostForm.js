@@ -10,20 +10,32 @@ const AddPostForm = () => {
     const [title, setTitle] = useState("")
     const [content, setContent] = useState("")
     const [userId, setUserId] = useState("")
+
+    const users = useSelector(selectAllUsers)
     
     const onTitleHasChanged = e => setTitle(e.target.value)
     const onContentHasChanged = e => setContent(e.target.value)
+    const onAuthorHasChanged = e => setUserId(e.target.value)
     const dispatch = useDispatch();
 
     const onSavePostClicked = () => {
-        if (title && content) {
+        if (title && content && userId) {
             dispatch(
-                postAdded(title, content)
+                postAdded(title, content, userId)
             )
             setTitle("")
             setContent("")
+            setUserId("")
         }
     }
+
+    const canSave = Boolean(title) && Boolean(content) && Boolean(userId)
+
+    const usersOptions = users.map(user => (
+        <option key={user.id} value={user.id}>
+            {user.name}
+        </option>
+    ))
 
   return (
     <section>
@@ -37,6 +49,14 @@ const AddPostForm = () => {
                 value={title}
                 onChange={onTitleHasChanged}
             />
+            <label htmlFor="postAuthor">Author:</label>
+            <select
+                id="postAuthor" 
+                value={userId} 
+                onChange={onAuthorHasChanged}>
+                <option value=""></option>
+                {usersOptions}
+            </select>
             <label htmlFor="postContent">Content:</label>
             <textarea 
                 id="postContent"
@@ -47,6 +67,7 @@ const AddPostForm = () => {
             <button 
                 type="button"
                 onClick={onSavePostClicked}
+                disabled={!canSave}
             >Save Post</button>
         </form>
     </section>
