@@ -5,6 +5,12 @@ import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { store } from "./app/store";
 import { Provider } from 'react-redux';
+import { fetchUsers } from './features/users/usersSlice';
+
+// want the users loaded up on app startup
+// we can do this because we already have access to the store here
+
+store.dispatch(fetchUsers());
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
