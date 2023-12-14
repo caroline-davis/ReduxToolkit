@@ -24,6 +24,15 @@ export const addNewPost = createAsyncThunk(
   }
 );
 
+export const updatePost = createAsyncThunk(
+  "posts/updatePost",
+  async (initialPost) => {
+    const { id } = initialPost
+    const response = await axios.put(`${POSTS_URL}/${id}`, initialPost)
+    return response.data;
+  }
+);
+
 // can mutate the state using immer (state.posts.push) in reducers, otherwise u gota do the spread op ...props
 const postsSlice = createSlice({
   name: "posts",
@@ -113,6 +122,18 @@ const postsSlice = createSlice({
         };
         console.log(action.payload);
         state.posts.push(action.payload);
+      })
+      .addCase(updatePost.fulfilled, (state, action) => {
+        if (!action.payload?.id) {
+          console.log("update could not complete")
+          return;
+        }
+        const { id } = action.payload;
+        action.payload.date = new Date().toISOString();
+        // remove previous post with same id 
+        const posts = state.posts.filter(post => post.id !== id);
+        // update with the previous posts and the new post
+        state.posts = [...posts, action.payload];
       });
   },
 });
@@ -123,5 +144,7 @@ export const { postAdded, reactionAdded } = postsSlice.actions;
 export const selectAllPosts = (state) => state.posts.posts;
 export const getPostsStatus = (state) => state.posts.status;
 export const getPostsError = (state) => state.posts.error;
+// finding the single post
+export const selectPostById = (state, postId) => state.posts.posts.find(post => post.id === postId);
 
 export default postsSlice.reducer;
