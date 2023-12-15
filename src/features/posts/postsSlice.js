@@ -27,9 +27,20 @@ export const addNewPost = createAsyncThunk(
 export const updatePost = createAsyncThunk(
   "posts/updatePost",
   async (initialPost) => {
-    const { id } = initialPost
-    const response = await axios.put(`${POSTS_URL}/${id}`, initialPost)
+    const { id } = initialPost;
+    const response = await axios.put(`${POSTS_URL}/${id}`, initialPost);
     return response.data;
+  }
+);
+
+export const deletePost = createAsyncThunk(
+  "posts/deletePost",
+  async (initialPost) => {
+    const { id } = initialPost;
+    const response = await axios.delete(`${POSTS_URL}/${id}`)
+    // this is a bit weird because of the fake api we are using... not standard 
+    if (response?.status === 200) return initialPost;
+    return `${response?.status}: ${response?.statusText}`;
   }
 );
 
@@ -109,7 +120,7 @@ const postsSlice = createSlice({
           return 0;
         });
         action.payload.id = sortedPosts[sortedPosts.length - 1].id + 1;
-        // End fix for fake API post IDs 
+        // End fix for fake API post IDs
 
         action.payload.userId = Number(action.payload.userId);
         action.payload.date = new Date().toISOString();
@@ -125,26 +136,39 @@ const postsSlice = createSlice({
       })
       .addCase(updatePost.fulfilled, (state, action) => {
         if (!action.payload?.id) {
-          console.log("update could not complete")
+          console.log("update could not complete");
           return;
         }
         const { id } = action.payload;
         action.payload.date = new Date().toISOString();
-        // remove previous post with same id 
-        const posts = state.posts.filter(post => post.id !== id);
+        // remove previous post with same id
+        const posts = state.posts.filter((post) => post.id !== id);
         // update with the previous posts and the new post
         state.posts = [...posts, action.payload];
-      });
+      })
+      .addCase(deletePost.fulfilled, (state, action) => {
+        if (!action.payload?.id) {
+          console.log("delete could not be completed")
+          return;
+        }
+        const { id } = action.payload; 
+        const posts = state.posts.filter((post) => post.id !== id);
+        state.posts = posts;
+      })
   },
 });
 
 // the postsSlice.actions bit, the actions is auto made with same name instead of doing manually
+// this part is for the reducers
 export const { postAdded, reactionAdded } = postsSlice.actions;
 
+// this is the initial status part up the top line 7
 export const selectAllPosts = (state) => state.posts.posts;
 export const getPostsStatus = (state) => state.posts.status;
 export const getPostsError = (state) => state.posts.error;
+
 // finding the single post
-export const selectPostById = (state, postId) => state.posts.posts.find(post => post.id === postId);
+export const selectPostById = (state, postId) =>
+  state.posts.posts.find((post) => post.id === postId);
 
 export default postsSlice.reducer;

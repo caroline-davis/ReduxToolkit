@@ -1,31 +1,31 @@
 import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { selectPostById, updatePost } from "./postsSlice";
+import { selectPostById, updatePost, deletePost } from "./postsSlice";
 import { useParams, useNavigate } from "react-router-dom";
 
-import  { selectAllUsers } from "../users/usersSlice";
+import { selectAllUsers } from "../users/usersSlice";
 
 const EditPostForm = () => {
   const { postId } = useParams();
   const navigate = useNavigate();
 
-  const post = useSelector((state) => selectPostById(state, Number(postId)))
-  const users = useSelector(selectAllUsers)
+  const post = useSelector((state) => selectPostById(state, Number(postId)));
+  const users = useSelector(selectAllUsers);
 
-  const [title, setTitle] = useState(post?.title)
-  const [content, setContent] = useState(post?.body)
-  const [userId, setUserId] = useState(post?.userId)
+  const [title, setTitle] = useState(post?.title);
+  const [content, setContent] = useState(post?.body);
+  const [userId, setUserId] = useState(post?.userId);
   // maybe not the Add
   const [requestStatus, setRequestStatus] = useState("idle");
 
-  const dispatch = useDispatch()
+  const dispatch = useDispatch();
 
   if (!post) {
     return (
-        <section>
-            <h2>Post not found!</h2>
-        </section>
-    )
+      <section>
+        <h2>Post not found!</h2>
+      </section>
+    );
   }
 
   const onTitleHasChanged = (e) => setTitle(e.target.value);
@@ -40,12 +40,20 @@ const EditPostForm = () => {
       try {
         setRequestStatus("pending");
         // unwrap is part of redux toolkit, it gives us the promise and will throw and err if rejected
-        dispatch(updatePost({ id: post.id, title, body: content, userId, reactions: post.reactions})).unwrap()
+        dispatch(
+          updatePost({
+            id: post.id,
+            title,
+            body: content,
+            userId,
+            reactions: post.reactions,
+          })
+        ).unwrap();
 
         setTitle("");
         setContent("");
         setUserId("");
-        navigate(`/post/${postId}`)
+        navigate(`/post/${postId}`);
       } catch (err) {
         console.error("failed to save the post", err);
       } finally {
@@ -60,6 +68,23 @@ const EditPostForm = () => {
     </option>
   ));
 
+  const onDeletePostClicked = () => {
+    try {
+      setRequestStatus("pending");
+      dispatch(deletePost({ id: post.id })).unwrap();
+
+      setTitle("");
+      setContent("");
+      setUserId("");
+      // navigate back to homepage
+      navigate("/");
+    } catch (err) {
+      console.error("failed to delete the post", err);
+    } finally {
+      setRequestStatus("idle");
+    }
+  };
+
   return (
     <section>
       <h2>Edit Post</h2>
@@ -73,7 +98,11 @@ const EditPostForm = () => {
           onChange={onTitleHasChanged}
         />
         <label htmlFor="postAuthor">Author:</label>
-        <select id="postAuthor" defaultValue={userId} onChange={onAuthorHasChanged}>
+        <select
+          id="postAuthor"
+          defaultValue={userId}
+          onChange={onAuthorHasChanged}
+        >
           <option value=""></option>
           {usersOptions}
         </select>
@@ -86,6 +115,13 @@ const EditPostForm = () => {
         />
         <button type="button" onClick={onSavePostClicked} disabled={!canSave}>
           Save Post
+        </button>
+        <button
+          className="deleteButton"
+          type="button"
+          onClick={onDeletePostClicked}
+        >
+          Delete Post
         </button>
       </form>
     </section>
