@@ -1,15 +1,23 @@
-import { createSlice, createAsyncThunk, createSelector } from "@reduxjs/toolkit";
+import {
+  createSlice,
+  createAsyncThunk,
+  createSelector,
+  createEntityAdapter,
+} from "@reduxjs/toolkit";
 import axios from "axios";
 import { sub } from "date-fns";
 
 const POSTS_URL = "https://jsonplaceholder.typicode.com/posts";
 
-const initialState = {
-  posts: [],
+const postsAdapter = createEntityAdapter({
+  sortComparer: (a, b) => b.date.localeCompare(a.date)
+})
+
+const initialState = postsAdapter.getInitialState({
   status: "idle", // "idle" | "loading" | "succeeded" | "failed"
   error: null,
   count: 0,
-};
+});
 
 export const fetchPosts = createAsyncThunk("posts/fetchPosts", async () => {
   const response = await axios.get(POSTS_URL);
@@ -25,26 +33,28 @@ export const addNewPost = createAsyncThunk(
   }
 );
 
-export const updatePost = createAsyncThunk('posts/updatePost', async (initialPost) => {
-  const { id } = initialPost;
-  // try-catch block only for development/testing with fake API
-  // otherwise, remove try-catch and add updatePost.rejected case
-  try {
-      const response = await axios.put(`${POSTS_URL}/${id}`, initialPost)
-      return response.data
-  } catch (err) {
+export const updatePost = createAsyncThunk(
+  "posts/updatePost",
+  async (initialPost) => {
+    const { id } = initialPost;
+    // try-catch block only for development/testing with fake API
+    // otherwise, remove try-catch and add updatePost.rejected case
+    try {
+      const response = await axios.put(`${POSTS_URL}/${id}`, initialPost);
+      return response.data;
+    } catch (err) {
       //return err.message;
       return initialPost; // only for testing Redux!
+    }
   }
-})
-
+);
 
 export const deletePost = createAsyncThunk(
   "posts/deletePost",
   async (initialPost) => {
     const { id } = initialPost;
-    const response = await axios.delete(`${POSTS_URL}/${id}`)
-    // this is a bit weird because of the fake api we are using... not standard 
+    const response = await axios.delete(`${POSTS_URL}/${id}`);
+    // this is a bit weird because of the fake api we are using... not standard
     if (response?.status === 200) return initialPost;
     return `${response?.status}: ${response?.statusText}`;
   }
@@ -58,14 +68,14 @@ const postsSlice = createSlice({
     reactionAdded: (state, action) => {
       console.log("Reaction Added:", action.payload);
       const { postId, reaction } = action.payload;
-      const existingPost = state.posts.find((post) => post.id === postId);
+      const existingPost = state.entities[postId];
       if (existingPost) {
         existingPost.reactions[reaction]++;
       }
     },
     increaseCount(state, action) {
-      state.count = state.count + 1
-    }
+      state.count = state.count + 1;
+    },
   },
   // this is for the async api calls, the actions called outside of the slice
   extraReducers(builder) {
@@ -89,7 +99,7 @@ const postsSlice = createSlice({
           return post;
         });
         // add any fetched posts to the array
-        state.posts = state.posts.concat(loadedPosts);
+        postsAdapter.upsertMany(state, loadedPosts)
       })
       .addCase(fetchPosts.rejected, (state, action) => {
         state.status = "failed";
@@ -118,7 +128,7 @@ const postsSlice = createSlice({
           coffee: 0,
         };
         console.log(action.payload);
-        state.posts.push(action.payload);
+        postsAdapter.addOne(state, action.payload)
       })
       .addCase(updatePost.fulfilled, (state, action) => {
         if (!action.payload?.id) {
@@ -128,42 +138,56 @@ const postsSlice = createSlice({
         const { id } = action.payload;
         action.payload.date = new Date().toISOString();
         // remove previous post with same id
-        const posts = state.posts.filter((post) => post.id !== id);
         // update with the previous posts and the new post
-        state.posts = [...posts, action.payload];
+        postsAdapter.upsertOne(state, action.payload)
       })
       .addCase(deletePost.fulfilled, (state, action) => {
         if (!action.payload?.id) {
-          console.log("delete could not be completed")
+          console.log("delete could not be completed");
           return;
         }
-        const { id } = action.payload; 
-        const posts = state.posts.filter((post) => post.id !== id);
-        state.posts = posts;
-      })
+        const { id } = action.payload;
+        postsAdapter.removeOne(state, id)
+      });
   },
 });
+
+// getSelectors creates these selectors and we rename them with alaises using destructuring
+export const {
+  selectAll: selectAllPosts,
+  selectById: selectPostById,
+  selectIds: selectPostIds
+  // pass in a selector that returns the posts slice of state
+} = postsAdapter.getSelectors(state => state.posts)
 
 // the postsSlice.actions bit, the actions is auto made with same name instead of doing manually
 // this part is for the reducers
 export const { increaseCount, reactionAdded } = postsSlice.actions;
 
 // this is the initial status part up the top line 7
-export const selectAllPosts = (state) => state.posts.posts;
 export const getPostsStatus = (state) => state.posts.status;
 export const getPostsError = (state) => state.posts.error;
 export const getCount = (state) => state.posts.count;
 
-// finding the single post
-export const selectPostById = (state, postId) =>
-  state.posts.posts.find((post) => post.id === postId);
-
-  // create selector accepts 1+ of input brackets. eg select all posts
-  // the provide the output function of our 'memorwize' eg posts, userId
-  // now when either posts or userId changes is when it updates.
+// create selector accepts 1+ of input brackets. eg select all posts
+// the provide the output function of our 'memorwize' eg posts, userId
+// now when either posts or userId changes is when it updates.
 export const selectPostsByUser = createSelector(
   [selectAllPosts, (state, userId) => userId],
-  (posts, userId) => posts.filter(post => post.userId === userId)
-)
+  (posts, userId) => posts.filter((post) => post.userId === userId)
+);
 
 export default postsSlice.reducer;
+
+// Basic terms:
+// state:
+// This is the entire state managed by your Redux store. In a Redux application, 
+// the state represents the current state of your application.
+// state.entities:
+// The createEntityAdapter organizes your state in a normalized way. state.entities is an object that 
+// holds your entities in a normalized form. The keys of this object are the entity IDs, and 
+// the values are the actual entities.
+// state.entities[postId]:
+// Given an postId, this expression retrieves the entity with that specific 
+// ID from the state.entities object. In other words, it gets the post entity associated 
+// with the provided postId.
