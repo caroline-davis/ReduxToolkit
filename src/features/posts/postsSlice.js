@@ -1,4 +1,4 @@
-import { createSlice, nanoid, createAsyncThunk } from "@reduxjs/toolkit";
+import { createSlice, createAsyncThunk, createSelector } from "@reduxjs/toolkit";
 import axios from "axios";
 import { sub } from "date-fns";
 
@@ -157,5 +157,13 @@ export const getCount = (state) => state.posts.count;
 // finding the single post
 export const selectPostById = (state, postId) =>
   state.posts.posts.find((post) => post.id === postId);
+
+  // create selector accepts 1+ of input brackets. eg select all posts
+  // the provide the output function of our 'memorwize' eg posts, userId
+  // now when either posts or userId changes is when it updates.
+export const selectPostsByUser = createSelector(
+  [selectAllPosts, (state, userId) => userId],
+  (posts, userId) => posts.filter(post => post.userId === userId)
+)
 
 export default postsSlice.reducer;

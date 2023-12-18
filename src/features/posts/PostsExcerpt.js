@@ -4,6 +4,7 @@ import TimeAgo from "./TimeAgo";
 import ReactionButtons from "./ReactionButtons";
 import { Link } from "react-router-dom";
 
+// let PostsExcerpt = ({ post }) => {
 const PostsExcerpt = ({ post }) => {
   return (
     <article>
@@ -18,5 +19,9 @@ const PostsExcerpt = ({ post }) => {
     </article>
   );
 };
+
+// this allows the component to not rerender if the prop it receives does not change
+// this is a quick way but not the best way to fix the performance optimisation 
+// PostsExcerpt = React.memo(PostsExcerpt)
 
 export default PostsExcerpt;
