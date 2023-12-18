@@ -19,7 +19,7 @@ const AddPostForm = () => {
 
   const onTitleHasChanged = (e) => setTitle(e.target.value);
   const onContentHasChanged = (e) => setContent(e.target.value);
-  const onAuthorHasChanged = (e) => setUserId(e.target.value);
+  const onAuthorHasChanged = (e) => setUserId(Number(e.target.value));
 
   const canSave = [title, content, userId].every(Boolean) && addRequestStatus === "idle";
 

@@ -8,6 +8,7 @@ const initialState = {
   posts: [],
   status: "idle", // "idle" | "loading" | "succeeded" | "failed"
   error: null,
+  count: 0,
 };
 
 export const fetchPosts = createAsyncThunk("posts/fetchPosts", async () => {
@@ -54,29 +55,6 @@ const postsSlice = createSlice({
   name: "posts",
   initialState,
   reducers: {
-    postAdded: {
-      reducer(state, action) {
-        state.posts.push(action.payload);
-      },
-      prepare(title, content, userId) {
-        return {
-          payload: {
-            id: nanoid(),
-            title,
-            content,
-            date: new Date().toISOString(),
-            userId,
-            reactions: {
-              thumbsUp: 0,
-              wow: 0,
-              heart: 0,
-              rocket: 0,
-              coffee: 0,
-            },
-          },
-        };
-      },
-    },
     reactionAdded: (state, action) => {
       console.log("Reaction Added:", action.payload);
       const { postId, reaction } = action.payload;
@@ -85,6 +63,9 @@ const postsSlice = createSlice({
         existingPost.reactions[reaction]++;
       }
     },
+    increaseCount(state, action) {
+      state.count = state.count + 1
+    }
   },
   // this is for the async api calls, the actions called outside of the slice
   extraReducers(builder) {
@@ -165,12 +146,13 @@ const postsSlice = createSlice({
 
 // the postsSlice.actions bit, the actions is auto made with same name instead of doing manually
 // this part is for the reducers
-export const { postAdded, reactionAdded } = postsSlice.actions;
+export const { increaseCount, reactionAdded } = postsSlice.actions;
 
 // this is the initial status part up the top line 7
 export const selectAllPosts = (state) => state.posts.posts;
 export const getPostsStatus = (state) => state.posts.status;
 export const getPostsError = (state) => state.posts.error;
+export const getCount = (state) => state.posts.count;
 
 // finding the single post
 export const selectPostById = (state, postId) =>
